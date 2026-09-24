@@ -1540,6 +1540,12 @@ class BranchOrchestrator:
         # applies no delay), so we must NOT turn that delay into a pre-join sleep
         # here. Spine gates are ``no_request``; normal DAG gates are not.
         if not pending.parent_no_request_on_gated_turn:
+            # Opt-in: honour the join turn's authored delay (e.g. replayed
+            # think_time) counted from the moment the last child finished.
+            if Environment.DAG.JOIN_TURN_APPLY_DELAY:
+                delay_ms = pending.parent_delay_ms_on_gated_turn
+                if delay_ms > 0.0 and math.isfinite(delay_ms):
+                    return delay_ms
             return 0.0
         return self._sample_think_ms(
             pending.parent_conversation_id,

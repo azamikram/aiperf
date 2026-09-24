@@ -249,6 +249,32 @@ def test_resolve_think_ms_zero_for_normal_dag_join_turn():
     assert orch._resolve_think_ms(normal_gate) == 0.0
 
 
+def test_resolve_think_ms_normal_join_turn_applies_delay_when_enabled(monkeypatch):
+    """With AIPERF_DAG_JOIN_TURN_APPLY_DELAY, a normal DAG join turn waits its
+    authored delay_ms (trace think_time) after the last child finishes."""
+    from aiperf.common.environment import Environment
+    from aiperf.common.models import ConversationMetadata
+    from aiperf.timing.branch_orchestrator import PendingBranchJoin
+
+    monkeypatch.setattr(Environment.DAG, "JOIN_TURN_APPLY_DELAY", True)
+    source = _mk_source([ConversationMetadata(conversation_id="parent")])
+    orch = BranchOrchestrator(conversation_source=source, credit_issuer=MagicMock())
+
+    def gate(delay_ms):
+        return PendingBranchJoin(
+            parent_x_correlation_id="i1",
+            parent_conversation_id="parent",
+            parent_num_turns=3,
+            gated_turn_index=1,
+            parent_delay_ms_on_gated_turn=delay_ms,
+            parent_no_request_on_gated_turn=False,
+        )
+
+    assert orch._resolve_think_ms(gate(200.0)) == 200.0
+    assert orch._resolve_think_ms(gate(0.0)) == 0.0
+    assert orch._resolve_think_ms(gate(float("nan"))) == 0.0
+
+
 def test_resolve_think_ms_samples_lognormal_per_instance_round():
     """A sampled spine draws an independent, reproducible lognormal think-time
     per (instance, round) around the stamped median."""

@@ -753,6 +753,16 @@ class _DagSettings(BaseSettings):
         "assertions.",
     )
 
+    JOIN_TURN_APPLY_DELAY: bool = Field(
+        default=False,
+        description="When True, a normal (request-bearing) DAG join turn waits "
+        "its authored delay_ms (e.g. a trace's think_time, after any delay cap) "
+        "after the last child finishes, before it is dispatched. Default False "
+        "keeps upstream behaviour: such joins fire immediately and only "
+        "request-free orchestrator spine gates get a pre-join think time. Set "
+        "via AIPERF_DAG_JOIN_TURN_APPLY_DELAY=1.",
+    )
+
 
 class _DeveloperSettings(BaseSettings):
     """Development and debugging configuration.
