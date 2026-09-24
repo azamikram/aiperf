@@ -84,6 +84,8 @@ def _implicit_timing_types() -> frozenset[object]:
     * ``baseten_trace`` is Parquet.
     * ``tracelab`` nests it under ``timing_events[]`` and may be gzipped; the
       loader derives an absolute submission time for every round it keeps.
+    * ``weka_trace`` is usually a directory of per-session JSON files; every
+      request carries a ``t`` timestamp (enforced by the Weka schema).
 
     Built lazily: ``CustomDatasetType`` members are registered from plugins.yaml.
     """
@@ -95,6 +97,7 @@ def _implicit_timing_types() -> frozenset[object]:
             CustomDatasetType.BURST_GPT_TRACE,
             CustomDatasetType.BASETEN_TRACE,
             CustomDatasetType.TRACELAB,
+            CustomDatasetType.WEKA_TRACE,
         }
     )
 

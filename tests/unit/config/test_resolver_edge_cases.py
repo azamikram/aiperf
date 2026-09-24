@@ -490,6 +490,19 @@ class TestDatasetResolverEdgeCases:
         gz.write_bytes(gz.read_bytes()[:20])
         assert DatasetResolver._check_timing_data(str(gz), None) is False
 
+    def test_check_timing_data_accepts_weka_trace_directory(self, tmp_path) -> None:
+        """A Weka trace directory has per-request ``t`` timestamps the generic
+        first-record probe can't see; accept it by type so --fixed-schedule works."""
+        from aiperf.plugin.enums import CustomDatasetType
+
+        assert DatasetResolver._check_timing_data(str(tmp_path), None) is False
+        assert (
+            DatasetResolver._check_timing_data(
+                str(tmp_path), None, CustomDatasetType.WEKA_TRACE
+            )
+            is True
+        )
+
     def test_read_first_jsonl_record_returns_none_on_crc_corrupt_gz(
         self, tmp_path
     ) -> None:
