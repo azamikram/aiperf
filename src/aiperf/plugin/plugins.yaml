@@ -735,7 +735,9 @@ custom_dataset_loader:
       Usage: --custom-dataset-type weka_trace --input-file path/to/traces/
     metadata:
       is_trace: true
-      default_block_size: 64
+      # No default_block_size: the composer passes it to the loader as an
+      # override, which would mask each trace file's declared block_size.
+      # Without it the loader uses the file's block_size (falls back to 64).
       default_prompt_corpus: coding
 
 # =============================================================================
