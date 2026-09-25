@@ -898,6 +898,19 @@ class BranchOrchestrator:
         for branch_id, gated_idx, prereq_key in prereq_entries:
             gate_for_branch.setdefault(branch_id, []).append((gated_idx, prereq_key))
 
+        # Opt-in child dispatch cap (AIPERF_DAG_CHILD_DISPATCH_CAP_SECONDS).
+        cap_s = Environment.DAG.CHILD_DISPATCH_CAP_SECONDS
+        dispatch_cap_ms = (
+            cap_s * 1000.0 if cap_s is not None and math.isfinite(cap_s) and cap_s >= 0 else None
+        )
+        spawner_end_ms: float | None = None
+        if dispatch_cap_ms is not None and credit.turn_index < len(parent_meta.turns):
+            spawner_turn = parent_meta.turns[credit.turn_index]
+            spawner_start = _as_timestamp_ms(getattr(spawner_turn, "timestamp_ms", None))
+            spawner_api = _as_timestamp_ms(getattr(spawner_turn, "api_time_ms", None))
+            if spawner_start is not None:
+                spawner_end_ms = spawner_start + max(spawner_api or 0.0, 0.0)
+
         all_children: list = []
         per_child_gates: dict[str, list[tuple[int, str]]] = {}
         per_child_branch_mode: dict[str, ConversationBranchMode] = {}
@@ -981,6 +994,17 @@ class BranchOrchestrator:
                     else branch_start_ms,
                     child,
                 )
+                if dispatch_cap_ms is not None:
+                    # Opt-in cap: restore the spawner-end -> branch-start gap
+                    # (turn-return path only; overlap dispatch has none) and
+                    # cap both it and the child's own offset.
+                    dispatch_offset_by_corr[child_corr] = self._capped_dispatch_offset_ms(
+                        dispatch_offset_by_corr[child_corr],
+                        self._spawner_to_branch_gap_ms(spawner_end_ms, branch_start_ms)
+                        if dispatch_origin_ms is None
+                        else 0.0,
+                        dispatch_cap_ms,
+                    )
                 all_children.append(child)
 
                 # Only FORK-mode children sticky-route to the parent's worker.
@@ -1287,6 +1311,28 @@ class BranchOrchestrator:
         if child_ts is None:
             return 0.0
         return max(0.0, child_ts - branch_start_ms)
+
+    @staticmethod
+    def _spawner_to_branch_gap_ms(
+        spawner_end_ms: float | None, branch_start_ms: float | None
+    ) -> float:
+        """Recorded idle gap from the spawning request's end to the branch start.
+
+        Upstream dispatches a turn-return branch at the spawner's replayed end
+        plus the child's offset from the branch start, so this gap is dropped.
+        Zero when either timestamp is missing or the branch began before the
+        spawner ended.
+        """
+        if spawner_end_ms is None or branch_start_ms is None:
+            return 0.0
+        return max(0.0, branch_start_ms - spawner_end_ms)
+
+    @staticmethod
+    def _capped_dispatch_offset_ms(
+        offset_ms: float, gap_ms: float, cap_ms: float
+    ) -> float:
+        """min(gap, cap) + min(offset, cap): each recorded wait capped separately."""
+        return min(max(gap_ms, 0.0), cap_ms) + min(max(offset_ms, 0.0), cap_ms)
 
     def _start_delayed_first_turn(
         self, child, offset_ms: float, parent_corr: str

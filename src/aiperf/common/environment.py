@@ -763,6 +763,18 @@ class _DagSettings(BaseSettings):
         "via AIPERF_DAG_JOIN_TURN_APPLY_DELAY=1.",
     )
 
+    CHILD_DISPATCH_CAP_SECONDS: float | None = Field(
+        default=None,
+        description="When set, caps SPAWN-child dispatch timing at this many "
+        "seconds, mirroring the per-turn inter_turn_delay_cap_seconds: the "
+        "child's recorded offset from its branch start (or, for overlap "
+        "dispatch, from the spawning request's start) is capped, and the "
+        "recorded gap between the spawning request's end and the branch start "
+        "-- which upstream drops to zero -- is restored, also capped. Default "
+        "None keeps upstream behaviour (uncapped offset, gap dropped). Set via "
+        "AIPERF_DAG_CHILD_DISPATCH_CAP_SECONDS=60.",
+    )
+
 
 class _DeveloperSettings(BaseSettings):
     """Development and debugging configuration.
