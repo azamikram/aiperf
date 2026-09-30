@@ -996,6 +996,12 @@ class _HTTPSettings(BaseSettings):
         default=True,
         description="Also send X-Session-Affinity with the stable X-Correlation-ID value.",
     )
+    X_ROOT_SESSION_ID_FROM_ROOT_CORRELATION_ID: bool = Field(
+        default=False,
+        description="Send X-Root-Session-ID with the root correlation ID of the request's "
+        "session tree (the same for a root session and all its subagents). Used by the "
+        "thin-proxy router to schedule per session tree.",
+    )
     X_SMG_ROUTING_KEY_FROM_CORRELATION_ID: bool = Field(
         default=False,
         description="Also send X-SMG-Routing-Key with the stable X-Correlation-ID value. "

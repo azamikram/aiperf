@@ -651,6 +651,34 @@ class TestSessionHeader:
         headers = transport.build_headers(self._make_request_info(transport))
         assert "X-SMG-Routing-Key" not in headers
 
+    def test_root_session_id_header_uses_root_correlation_id(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr(
+            Environment.HTTP, "X_ROOT_SESSION_ID_FROM_ROOT_CORRELATION_ID", True
+        )
+        transport = self._make_transport()
+        request_info = self._make_request_info(transport)
+        request_info.root_correlation_id = "root-uuid-1"  # subagent: differs from x_correlation_id
+        headers = transport.build_headers(request_info)
+        assert headers["X-Root-Session-ID"] == "root-uuid-1"
+        assert headers["X-Correlation-ID"] == "conv-uuid-123"
+
+    def test_root_session_id_falls_back_to_correlation_id_for_root(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr(
+            Environment.HTTP, "X_ROOT_SESSION_ID_FROM_ROOT_CORRELATION_ID", True
+        )
+        transport = self._make_transport()
+        headers = transport.build_headers(self._make_request_info(transport))
+        assert headers["X-Root-Session-ID"] == "conv-uuid-123"
+
+    def test_root_session_id_header_off_by_default(self):
+        transport = self._make_transport()
+        headers = transport.build_headers(self._make_request_info(transport))
+        assert "X-Root-Session-ID" not in headers
+
     def test_session_id_authoritative_over_endpoint_headers(
         self, monkeypatch: pytest.MonkeyPatch
     ):

@@ -167,6 +167,12 @@ class BaseTransport(AIPerfLifecycleMixin, ABC):
                 _remove_headers_case_insensitive(headers, ("X-SMG-Routing-Key",))
                 headers["X-SMG-Routing-Key"] = request_info.x_correlation_id
 
+        if Environment.HTTP.X_ROOT_SESSION_ID_FROM_ROOT_CORRELATION_ID:
+            root_id = request_info.root_correlation_id or request_info.x_correlation_id
+            if root_id:
+                _remove_headers_case_insensitive(headers, ("X-Root-Session-ID",))
+                headers["X-Root-Session-ID"] = root_id
+
         # Apply derived Dynamo session headers last so they are authoritative
         # and cannot be overwritten by endpoint, extra, or transport headers.
         # Strip any caller-supplied variants case-insensitively first, since HTTP
